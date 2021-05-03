@@ -45,11 +45,14 @@ module System.Random.SplitMix.Distributions (
   -- ** Discrete
   bernoulli, fairCoin,
   multinomial,
+  categorical,
+  discrete,
+  zipf,
   -- * PRNG
   -- ** Pure
-  Gen, sample,
+  Gen, sample, samples,
   -- ** Monadic
-  GenT, sampleT,
+  GenT, sampleT, samplesT,
   withGen
                                             ) where
 
@@ -80,18 +83,33 @@ newtype GenT m a = GenT { unGen :: StateT SMGen m a } deriving (Functor, Applica
 -- | Pure random generation
 type Gen = GenT Identity
 
--- | Monadic evaluation
+-- | Sample in a monadic context
 sampleT :: Monad m =>
-            Word64 -- ^ random seed
-         -> GenT m a -> m a
+           Word64 -- ^ random seed
+        -> GenT m a
+        -> m a
 sampleT seed gg = evalStateT (unGen gg) (mkSMGen seed)
 
--- | Pure evaluation
+-- | Sample a batch
+samplesT :: Monad m =>
+            Int -- ^ size of sample
+         -> Word64 -- ^ random seed
+         -> GenT m a
+         -> m [a]
+samplesT n seed gg = sampleT seed (replicateM n gg)
+
+-- | Pure sampling
 sample :: Word64 -- ^ random seed
         -> Gen a
         -> a
 sample seed gg = evalState (unGen gg) (mkSMGen seed)
 
+-- | Sample a batch
+samples :: Int -- ^ sample size
+        -> Word64 -- ^ random seed
+        -> Gen a
+        -> [a]
+samples n seed gg = sample seed (replicateM n gg)
 
 -- | Bernoulli trial
 bernoulli :: Monad m =>
@@ -123,6 +141,57 @@ multinomial n ps = do
     runningTotals xs = let adds = scanl1 (+) xs in (adds, sum xs)
 {-# INLINABLE multinomial #-}
 
+
+-- | Categorical distribution
+--
+-- Picks one index out of a discrete set with probability proportional to those supplied as input parameter vector
+categorical :: (Monad m, Foldable t) =>
+               t Double -- ^ probability vector \( p_i \gt 0 , \forall i \) (does not need to be normalized)
+            -> GenT m (Maybe Int)
+categorical ps = do
+  xs <- multinomial 1 ps
+  case xs of
+    Just [x] -> pure $ Just x
+    _ -> pure Nothing
+
+
+-- | The Zipf-Mandelbrot distribution.
+--
+--  Note that values of the parameter close to 1 are very computationally intensive.
+--
+--  >>> samples 10 1234 (zipf 1.1)
+--  [3170051793,2,668775891,146169301649651,23,36,5,6586194257347,21,37911]
+--
+--  >>> samples 10 1234 (zipf 1.5)
+--  [79,1,58,680,3,1,2,1,366,1]
+zipf :: (Monad m, Integral i) =>
+        Double -- ^ \( \alpha \gt 1 \)
+     -> GenT m i
+zipf a = do
+  let
+    b = 2 ** (a - 1)
+    go = do
+        u <- stdUniform
+        v <- stdUniform
+        let xInt = floor (u ** (- 1 / (a - 1)))
+            x = fromIntegral xInt
+            t = (1 + 1 / x) ** (a - 1)
+        if v * x * (t - 1) / (b - 1) <= t / b
+          then return xInt
+          else go
+  go
+{-# INLINABLE zipf #-}
+
+-- | Discrete distribution
+--
+-- Pick one item with probability proportional to those supplied as input parameter vector
+discrete :: (Monad m, Foldable t) =>
+            t (Double, b) -- ^ (probability, item) vector \( p_i \gt 0 , \forall i \) (does not need to be normalized)
+         -> GenT m (Maybe b)
+discrete d = do
+  let (ps, xs) = unzip (toList d)
+  midx <- categorical ps
+  pure $ (xs !!) <$> midx
 
 -- | Uniform between two values
 uniformR :: Monad m =>
