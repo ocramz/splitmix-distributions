@@ -51,6 +51,7 @@ module System.Random.SplitMix.Distributions (
   categorical,
   discrete,
   zipf,
+  crp,
   -- * PRNG
   -- ** Pure
   Gen, sample, samples,
@@ -64,8 +65,11 @@ import Control.Monad.IO.Class (MonadIO(..))
 import Data.Foldable (toList)
 import Data.Functor.Identity (Identity(..))
 import Data.List (findIndex)
+import Data.Monoid (Sum(..))
 import GHC.Word (Word64)
 
+-- containers
+import qualified Data.IntMap as IM
 -- erf
 import Data.Number.Erf (InvErf(..))
 -- mtl
@@ -195,6 +199,53 @@ discrete d = do
   let (ps, xs) = unzip (toList d)
   midx <- categorical ps
   pure $ (xs !!) <$> midx
+
+
+-- | Chinese restaurant process
+crp :: Monad m =>
+       Double -- ^ concentration parameter \( \alpha \gt 1 \)
+    -> Int -- ^ number of customers \( n > 0 \)
+    -> GenT m [Integer]
+crp a n = do
+    ts <- go crpInitial 1
+    pure $ toList (fmap getSum ts)
+  where
+    go acc i
+      | i == n = pure acc
+      | otherwise = do
+          acc' <- crpSingle i acc a
+          go acc' (i + 1)
+{-# INLINABLE crp #-}
+
+-- | Update step of the CRP
+crpSingle :: (Monad m, Integral a) =>
+             Int -> CRPTables (Sum a) -> Double -> GenT m (CRPTables (Sum a))
+crpSingle i zs a = do
+    znm1 <- categorical probs
+    case znm1 of
+      Just zn1 -> pure $ crpInsert zn1 zs
+      _ -> pure mempty
+  where
+    probs = pms <> [pm1]
+    acc m = fromIntegral m / (fromIntegral i - 1 + a)
+    pms = toList $ fmap (acc . getSum) zs
+    pm1 = a / (fromIntegral i - 1 + a)
+
+-- Tables at the Chinese Restaurant
+newtype CRPTables c = CRP {
+    getCRPTables :: IM.IntMap c
+  } deriving (Eq, Show, Functor, Foldable, Semigroup, Monoid)
+
+-- Initial state of the CRP : one customer sitting at table #0
+crpInitial :: CRPTables (Sum Integer)
+crpInitial = crpInsert 0 mempty
+
+-- Seat one customer at table 'k'
+crpInsert :: Num a => IM.Key -> CRPTables (Sum a) -> CRPTables (Sum a)
+crpInsert k (CRP ts) = CRP $ IM.insertWith (<>) k (Sum 1) ts
+
+
+
 
 -- | Uniform between two values
 uniformR :: Monad m =>

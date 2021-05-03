@@ -1,3 +1,7 @@
+0.6 :
+
+- add Chinese Restaurant Process
+
 0.5 :
 
 - add Log-normal, Laplace, Weibull distributions
