@@ -1,3 +1,4 @@
-# Changelog for splitmix-distributions
+0.2 :
 
-## Unreleased changes
+- add Pareto and Dirichlet distributions
+

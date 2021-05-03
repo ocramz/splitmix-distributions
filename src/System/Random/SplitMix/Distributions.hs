@@ -40,6 +40,8 @@ module System.Random.SplitMix.Distributions (
   stdNormal, normal,
   beta,
   gamma,
+  pareto,
+  dirichlet,
   -- ** Discrete
   bernoulli,
   -- * PRNG
@@ -152,6 +154,29 @@ gamma k th = do
           | otherwise =
             let xi = 1 - log v
             in (xi, w * exp (- xi))
+
+-- | Pareto distribution
+pareto :: Double -- ^ shape parameter \( \alpha \gt 0 \)
+       -> Double -- ^ scale parameter \( x_{min} \gt 0 \)
+       -> Gen Double
+pareto a xmin = do
+  y <- exponential a
+  return $ xmin * exp y
+{-# INLINABLE pareto #-}
+
+-- | The Dirichlet distribution with the provided concentration parameters.
+--   The dimension of the distribution is determined by the number of
+--   concentration parameters supplied.
+--
+--   >>> sample 1234 (dirichlet [0.1, 1, 10])
+--   [2.3781130220132788e-11,6.646079701567026e-2,0.9335392029605486]
+dirichlet :: Traversable f =>
+             f Double -- ^ concentration parameters \( \gamma_i \gt 0 , \forall i \)
+          -> Gen (f Double)
+dirichlet as = do
+  zs <- traverse (`gamma` 1) as
+  return $ fmap (/ sum zs) zs
+{-# INLINABLE dirichlet #-}
 
 
 -- | Normal distribution
