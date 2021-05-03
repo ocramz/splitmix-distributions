@@ -43,7 +43,7 @@ module System.Random.SplitMix.Distributions (
   pareto,
   dirichlet,
   -- ** Discrete
-  bernoulli,
+  bernoulli, fairCoin,
   multinomial,
   -- * PRNG
   -- ** Pure
@@ -94,23 +94,30 @@ sample seed gg = evalState (unGen gg) (mkSMGen seed)
 
 
 -- | Bernoulli trial
-bernoulli :: Double -- ^ bias parameter \( 0 \lt p \lt 1 \)
-          -> Gen Bool
+bernoulli :: Monad m =>
+             Double -- ^ bias parameter \( 0 \lt p \lt 1 \)
+          -> GenT m Bool
 bernoulli p = withGen (bernoulliF p)
 
+-- | A fair coin toss returns either value with probability 0.5
+fairCoin :: Monad m => GenT m Bool
+fairCoin = bernoulli 0.5
 
 -- | Multinomial distribution
-multinomial :: Foldable t =>
+--
+-- NB : returns @Nothing@ if any of the input probabilities is negative
+multinomial :: (Monad m, Foldable t) =>
                Int -- ^ number of Bernoulli trials \( n \gt 0 \)
-            -> t Double -- ^ probability vector \( p_i \gt 0 , \forall i \)
-            -> Gen [Int]
+            -> t Double -- ^ probability vector \( p_i \gt 0 , \forall i \) (does not need to be normalized)
+            -> GenT m (Maybe [Int])
 multinomial n ps = do
     let (cumulative, total) = runningTotals (toList ps)
-    replicateM n $ do
+    ms <- replicateM n $ do
       z <- uniformR 0 total
-      case findIndex (> z) cumulative of
-        Just g  -> return g
-        Nothing -> error "splitmix-distributions: invalid probability vector"
+      pure $ findIndex (> z) cumulative
+        -- Just g  -> return g
+        -- Nothing -> error "splitmix-distributions: invalid probability vector"
+    pure $ sequence ms
   where
     runningTotals :: Num a => [a] -> ([a], a)
     runningTotals xs = let adds = scanl1 (+) xs in (adds, sum xs)
@@ -118,25 +125,27 @@ multinomial n ps = do
 
 
 -- | Uniform between two values
-uniformR :: Double -- ^ low
+uniformR :: Monad m =>
+            Double -- ^ low
          -> Double -- ^ high
-         -> Gen Double
+         -> GenT m Double
 uniformR lo hi = scale <$> stdUniform
   where
     scale x = x * (hi - lo) + lo
 
 -- | Standard normal distribution
-stdNormal :: Gen Double
+stdNormal :: Monad m => GenT m Double
 stdNormal = normal 0 1
 
 -- | Uniform in [0, 1)
-stdUniform :: Gen Double
+stdUniform :: Monad m => GenT m Double
 stdUniform = withGen nextDouble
 
 -- | Beta distribution, from two standard uniform samples
-beta :: Double -- ^ shape parameter \( \alpha \gt 0 \) 
+beta :: Monad m =>
+        Double -- ^ shape parameter \( \alpha \gt 0 \) 
      -> Double -- ^ shape parameter \( \beta \gt 0 \)
-     -> Gen Double
+     -> GenT m Double
 beta a b = go
   where
     go = do
@@ -152,9 +161,10 @@ beta a b = go
 -- | Gamma distribution, using Ahrens-Dieter accept-reject (algorithm GD):
 --
 -- Ahrens, J. H.; Dieter, U (January 1982). "Generating gamma variates by a modified rejection technique". Communications of the ACM. 25 (1): 47–54
-gamma :: Double -- ^ shape parameter \( k \gt 0 \)
+gamma :: Monad m =>
+         Double -- ^ shape parameter \( k \gt 0 \)
       -> Double -- ^ scale parameter \( \theta \gt 0 \)
-      -> Gen Double
+      -> GenT m Double
 gamma k th = do
   xi <- sampleXi
   us <- replicateM n (log <$> stdUniform)
@@ -178,9 +188,10 @@ gamma k th = do
             in (xi, w * exp (- xi))
 
 -- | Pareto distribution
-pareto :: Double -- ^ shape parameter \( \alpha \gt 0 \)
+pareto :: Monad m =>
+          Double -- ^ shape parameter \( \alpha \gt 0 \)
        -> Double -- ^ scale parameter \( x_{min} \gt 0 \)
-       -> Gen Double
+       -> GenT m Double
 pareto a xmin = do
   y <- exponential a
   return $ xmin * exp y
@@ -192,9 +203,9 @@ pareto a xmin = do
 --
 --   >>> sample 1234 (dirichlet [0.1, 1, 10])
 --   [2.3781130220132788e-11,6.646079701567026e-2,0.9335392029605486]
-dirichlet :: Traversable f =>
+dirichlet :: (Monad m, Traversable f) =>
              f Double -- ^ concentration parameters \( \gamma_i \gt 0 , \forall i \)
-          -> Gen (f Double)
+          -> GenT m (f Double)
 dirichlet as = do
   zs <- traverse (`gamma` 1) as
   return $ fmap (/ sum zs) zs
@@ -202,14 +213,16 @@ dirichlet as = do
 
 
 -- | Normal distribution
-normal :: Double -- ^ mean
+normal :: Monad m =>
+          Double -- ^ mean
        -> Double -- ^ standard deviation \( \sigma \gt 0 \)
-       -> Gen Double
+       -> GenT m Double
 normal mu sig = withGen (normalF mu sig)
 
 -- | Exponential distribution
-exponential :: Double -- ^ rate parameter \( \lambda > 0 \)
-            -> Gen Double
+exponential :: Monad m =>
+               Double -- ^ rate parameter \( \lambda > 0 \)
+            -> GenT m Double
 exponential l = withGen (exponentialF l)
 
 -- | Wrap a 'splitmix' PRNG function

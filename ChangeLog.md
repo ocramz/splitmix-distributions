@@ -1,3 +1,7 @@
+0.3 :
+
+- type signatures of all generators are now parametrized over some Monad m rather than Identity. This allows for more flexibility on the use site.
+
 0.2 :
 
 - add Pareto, Dirichlet, multinomial distributions
