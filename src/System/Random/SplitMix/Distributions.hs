@@ -1,11 +1,11 @@
 {-# language GeneralizedNewtypeDeriving #-}
 {-# options_ghc -Wno-unused-imports #-}
 {-|
-Random generation according to a few common distributions, with an interface similar to that of @mwc-probability@
+Random samplers for few common distributions, with an interface similar to that of @mwc-probability@.
 
 = Usage
 
-Compose your random sampler out of smaller generators thanks to the Applicative and Monad interface, e.g.
+Compose your random sampler out of simpler ones thanks to the Applicative and Monad interface, e.g. this is how you would declare and sample a binary mixture of Gaussian random variables:
 
 @
 import Control.Monad (replicateM)
