@@ -1,8 +1,10 @@
 name:           splitmix-distributions
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/ocramz/splitmix-distributions#readme>
+description:    Random samplers for some common distributions, as well as a convenient interface for composing them, based on splitmix. Please see the README on GitHub at <https://github.com/ocramz/splitmix-distributions#readme>
 homepage:       https://github.com/ocramz/splitmix-distributions#readme
 bug-reports:    https://github.com/ocramz/splitmix-distributions/issues
+category:       Math
+synopsis:       Random samplers for some common distributions, based on splitmix.
 author:         Marco Zocca
 maintainer:     ocramz
 copyright:      2021 Marco Zocca

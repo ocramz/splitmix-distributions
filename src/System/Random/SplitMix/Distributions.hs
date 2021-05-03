@@ -11,7 +11,7 @@ Compose your random sampler out of simpler ones thanks to the Applicative and Mo
 import Control.Monad (replicateM)
 import System.Random.SplitMix.Distributions (Gen, sample, bernoulli, normal)
 
-process :: Gen Double
+process :: `Gen` Double
 process = do
   coin <- `bernoulli` 0.7
   if coin
@@ -21,7 +21,7 @@ process = do
       normal 3 1
 
 dataset :: [Double]
-dataset = sample 1234 $ replicateM 20 process
+dataset = `sample` 1234 $ replicateM 20 process
 @
 
 and sample your data in a pure (`sample`) or monadic (`sampleT`) setting.
