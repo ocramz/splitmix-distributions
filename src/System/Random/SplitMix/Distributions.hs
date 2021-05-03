@@ -42,6 +42,9 @@ module System.Random.SplitMix.Distributions (
   gamma,
   pareto,
   dirichlet,
+  logNormal,
+  laplace,
+  weibull,
   -- ** Discrete
   bernoulli, fairCoin,
   multinomial,
@@ -293,6 +296,46 @@ exponential :: Monad m =>
                Double -- ^ rate parameter \( \lambda > 0 \)
             -> GenT m Double
 exponential l = withGen (exponentialF l)
+
+
+
+
+-- | Log-normal distribution with specified mean and standard deviation.
+logNormal :: Monad m =>
+             Double
+          -> Double -- ^ standard deviation \( \sigma \gt 0 \)
+          -> GenT m Double
+logNormal m sd = exp <$> normal m sd
+{-# INLINABLE logNormal #-}
+
+
+-- | Laplace or double-exponential distribution with provided location and
+--   scale parameters.
+laplace :: Monad m =>
+           Double -- ^ location parameter
+        -> Double  -- ^ scale parameter \( s \gt 0 \)
+        -> GenT m Double
+laplace mu sigma = do
+  u <- uniformR (-0.5) 0.5
+  let b = sigma / sqrt 2
+  return $ mu - b * signum u * log (1 - 2 * abs u)
+{-# INLINABLE laplace #-}
+
+-- | Weibull distribution with provided shape and scale parameters.
+weibull :: Monad m =>
+           Double -- ^ shape \( a \gt 0 \)
+        -> Double -- ^ scale \( b \gt 0 \)
+        -> GenT m Double
+weibull a b = do
+  x <- stdUniform
+  return $ (- 1/a * log (1 - x)) ** 1/b
+{-# INLINABLE weibull #-}
+
+
+
+
+
+
 
 -- | Wrap a 'splitmix' PRNG function
 withGen :: Monad m =>

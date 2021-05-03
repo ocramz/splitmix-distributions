@@ -1,3 +1,7 @@
+0.5 :
+
+- add Log-normal, Laplace, Weibull distributions
+
 0.4 :
 
 - add Discrete, Categorical, Zipf-Mandelbrot distributions
