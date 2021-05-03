@@ -1,4 +1,4 @@
 0.2 :
 
-- add Pareto and Dirichlet distributions
+- add Pareto, Dirichlet, multinomial distributions
 

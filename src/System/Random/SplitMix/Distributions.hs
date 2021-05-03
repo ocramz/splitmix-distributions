@@ -44,6 +44,7 @@ module System.Random.SplitMix.Distributions (
   dirichlet,
   -- ** Discrete
   bernoulli,
+  multinomial,
   -- * PRNG
   -- ** Pure
   Gen, sample,
@@ -54,7 +55,9 @@ module System.Random.SplitMix.Distributions (
 
 import Control.Monad (replicateM)
 import Control.Monad.IO.Class (MonadIO(..))
+import Data.Foldable (toList)
 import Data.Functor.Identity (Identity(..))
+import Data.List (findIndex)
 import GHC.Word (Word64)
 
 -- erf
@@ -95,6 +98,25 @@ bernoulli :: Double -- ^ bias parameter \( 0 \lt p \lt 1 \)
           -> Gen Bool
 bernoulli p = withGen (bernoulliF p)
 
+
+-- | Multinomial distribution
+multinomial :: Foldable t =>
+               Int -- ^ number of Bernoulli trials \( n \gt 0 \)
+            -> t Double -- ^ probability vector \( p_i \gt 0 , \forall i \)
+            -> Gen [Int]
+multinomial n ps = do
+    let (cumulative, total) = runningTotals (toList ps)
+    replicateM n $ do
+      z <- uniformR 0 total
+      case findIndex (> z) cumulative of
+        Just g  -> return g
+        Nothing -> error "splitmix-distributions: invalid probability vector"
+  where
+    runningTotals :: Num a => [a] -> ([a], a)
+    runningTotals xs = let adds = scanl1 (+) xs in (adds, sum xs)
+{-# INLINABLE multinomial #-}
+
+
 -- | Uniform between two values
 uniformR :: Double -- ^ low
          -> Double -- ^ high
@@ -103,7 +125,7 @@ uniformR lo hi = scale <$> stdUniform
   where
     scale x = x * (hi - lo) + lo
 
--- | Standard normal
+-- | Standard normal distribution
 stdNormal :: Gen Double
 stdNormal = normal 0 1
 
