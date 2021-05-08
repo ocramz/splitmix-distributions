@@ -26,9 +26,11 @@ dataset = `sample` 1234 $ replicateM 20 process
 
 and sample your data in a pure (`sample`) or monadic (`sampleT`) setting.
 
+Initializing the PRNG with a fixed seed makes all results fully reproducible across runs. If this behavior is not desired, one can sample the random seed itself from an IO-based entropy pool, and run the samplers with `sampleIO` and `samplesIO`.
+
 == Implementation details
 
-The library is built on top of @splitmix@, so the caveats on safety and performance that apply there are relevant here as well.
+The library is built on top of @splitmix@ ( https://hackage.haskell.org/package/splitmix ), which provides fast pseudorandom number generation utilities.
 
 
 -}
@@ -57,6 +59,9 @@ module System.Random.SplitMix.Distributions (
   Gen, sample, samples,
   -- ** Monadic
   GenT, sampleT, samplesT,
+  -- ** IO-based
+  sampleIO, samplesIO,
+  -- ** splitmix utilities
   withGen
                                             ) where
 
@@ -72,11 +77,13 @@ import GHC.Word (Word64)
 import qualified Data.IntMap as IM
 -- erf
 import Data.Number.Erf (InvErf(..))
+-- exceptions
+import Control.Monad.Catch (MonadThrow(..))
 -- mtl
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.State (MonadState(..), modify)
 -- splitmix
-import System.Random.SplitMix (SMGen, mkSMGen, splitSMGen, nextInt, nextInteger, nextDouble)
+import System.Random.SplitMix (SMGen, mkSMGen, initSMGen, unseedSMGen, splitSMGen, nextInt, nextInteger, nextDouble)
 -- transformers
 import Control.Monad.Trans.State (StateT(..), runStateT, evalStateT, State, runState, evalState)
 
@@ -85,7 +92,7 @@ import Control.Monad.Trans.State (StateT(..), runStateT, evalStateT, State, runS
 -- wraps 'splitmix' state-passing inside a 'StateT' monad
 --
 -- useful for embedding random generation inside a larger effect stack
-newtype GenT m a = GenT { unGen :: StateT SMGen m a } deriving (Functor, Applicative, Monad, MonadState SMGen, MonadTrans, MonadIO)
+newtype GenT m a = GenT { unGen :: StateT SMGen m a } deriving (Functor, Applicative, Monad, MonadState SMGen, MonadTrans, MonadIO, MonadThrow)
 
 -- | Pure random generation
 type Gen = GenT Identity
@@ -97,6 +104,12 @@ sampleT :: Monad m =>
         -> m a
 sampleT seed gg = evalStateT (unGen gg) (mkSMGen seed)
 
+-- | Initialize a splitmix random generator from system entropy (current time etc.) and sample from the PRNG.
+sampleIO :: MonadIO m => GenT m b -> m b
+sampleIO gg = do
+  (s, _) <- unseedSMGen <$> liftIO initSMGen
+  sampleT s gg
+
 -- | Sample a batch
 samplesT :: Monad m =>
             Int -- ^ size of sample
@@ -104,6 +117,12 @@ samplesT :: Monad m =>
          -> GenT m a
          -> m [a]
 samplesT n seed gg = sampleT seed (replicateM n gg)
+
+-- | Initialize a splitmix random generator from system entropy (current time etc.) and sample n times from the PRNG.
+samplesIO :: MonadIO m => Int -> GenT m a -> m [a]
+samplesIO n gg = do
+  (s, _) <- unseedSMGen <$> liftIO initSMGen
+  samplesT n s gg
 
 -- | Pure sampling
 sample :: Word64 -- ^ random seed
@@ -202,6 +221,15 @@ discrete d = do
 
 
 -- | Chinese restaurant process
+--
+-- >>> sample 1234 $ crp 1.02 50
+-- [24,18,7,1]
+--
+-- >>> sample 1234 $ crp 2 50
+-- [17,8,13,3,3,3,2,1]
+--
+-- >>> sample 1234 $ crp 10 50
+-- [5,7,1,6,1,3,5,1,1,3,1,1,1,4,3,1,3,1,1,1]
 crp :: Monad m =>
        Double -- ^ concentration parameter \( \alpha \gt 1 \)
     -> Int -- ^ number of customers \( n > 0 \)

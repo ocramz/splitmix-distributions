@@ -1,3 +1,13 @@
+0.8 :
+
+- add `exceptions` dependency
+- add MonadThrow (GenT m) instance
+
+0.7 :
+
+- add sampleIO, samplesIO
+- clarify pure vs IO-based sampling in the docs
+
 0.6 :
 
 - add Chinese Restaurant Process

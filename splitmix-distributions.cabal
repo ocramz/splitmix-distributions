@@ -1,5 +1,5 @@
 name:           splitmix-distributions
-version:        0.6.0.0
+version:        0.8.0.0
 description:    Random samplers for some common distributions, as well as a convenient interface for composing them, based on splitmix. Please see the README on GitHub at <https://github.com/ocramz/splitmix-distributions#readme>
 homepage:       https://github.com/ocramz/splitmix-distributions#readme
 bug-reports:    https://github.com/ocramz/splitmix-distributions/issues
@@ -30,6 +30,7 @@ library
                     base >=4.7 && <5
                   , containers >= 0.6.2.1
                   , erf
+                  , exceptions
                   , mtl
                   , splitmix
                   , transformers
