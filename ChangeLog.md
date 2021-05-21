@@ -1,3 +1,8 @@
+0.9 :
+
+- ensure it builds with ghc 8.6.5 (== stackage lts 14.27) as well
+- relax lower bound
+
 0.8 :
 
 - add `exceptions` dependency

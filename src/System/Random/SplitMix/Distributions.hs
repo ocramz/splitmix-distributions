@@ -83,7 +83,7 @@ import Control.Monad.Catch (MonadThrow(..))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.State (MonadState(..), modify)
 -- splitmix
-import System.Random.SplitMix (SMGen, mkSMGen, initSMGen, unseedSMGen, splitSMGen, nextInt, nextInteger, nextDouble)
+import System.Random.SplitMix (SMGen, mkSMGen, initSMGen, unseedSMGen, splitSMGen, nextDouble)
 -- transformers
 import Control.Monad.Trans.State (StateT(..), runStateT, evalStateT, State, runState, evalState)
 

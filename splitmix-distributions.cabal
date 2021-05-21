@@ -1,5 +1,5 @@
 name:           splitmix-distributions
-version:        0.8.0.0
+version:        0.9.0.0
 description:    Random samplers for some common distributions, as well as a convenient interface for composing them, based on splitmix. Please see the README on GitHub at <https://github.com/ocramz/splitmix-distributions#readme>
 homepage:       https://github.com/ocramz/splitmix-distributions#readme
 bug-reports:    https://github.com/ocramz/splitmix-distributions/issues
@@ -12,7 +12,7 @@ license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
 cabal-version:  >= 1.10
-tested-with:    GHC == 8.10.4
+tested-with:    GHC == 8.6.5, GHC == 8.10.4
 extra-source-files:
     README.md
     ChangeLog.md
@@ -28,7 +28,7 @@ library
       src
   build-depends:
                     base >=4.7 && <5
-                  , containers >= 0.6.2.1
+                  , containers
                   , erf
                   , exceptions
                   , mtl
