@@ -1,3 +1,8 @@
+1.0
+
+- add MonadReader r (GenT m) instance
+- fixed MonadState (GenT m) instance via MonadTrans (i.e. as done in 'mtl')
+
 0.9 :
 
 - ensure it builds with ghc 8.6.5 (== stackage lts 14.27) as well

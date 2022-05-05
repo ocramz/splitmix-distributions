@@ -1,4 +1,7 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# language GeneralizedNewtypeDeriving #-}
+{-# language MultiParamTypeClasses #-}
+{-# language UndecidableInstances #-}
 {-# options_ghc -Wno-unused-imports #-}
 {-|
 Random samplers for few common distributions, with an interface similar to that of @mwc-probability@.
@@ -81,10 +84,12 @@ import Data.Number.Erf (InvErf(..))
 import Control.Monad.Catch (MonadThrow(..))
 -- mtl
 import Control.Monad.Trans.Class (MonadTrans(..))
+import Control.Monad.Reader (MonadReader(..))
 import Control.Monad.State (MonadState(..), modify)
 -- splitmix
 import System.Random.SplitMix (SMGen, mkSMGen, initSMGen, unseedSMGen, splitSMGen, nextDouble)
 -- transformers
+import Control.Monad.Trans.Reader (ReaderT(..))
 import Control.Monad.Trans.State (StateT(..), runStateT, evalStateT, State, runState, evalState)
 
 -- | Random generator
@@ -92,7 +97,13 @@ import Control.Monad.Trans.State (StateT(..), runStateT, evalStateT, State, runS
 -- wraps 'splitmix' state-passing inside a 'StateT' monad
 --
 -- useful for embedding random generation inside a larger effect stack
-newtype GenT m a = GenT { unGen :: StateT SMGen m a } deriving (Functor, Applicative, Monad, MonadState SMGen, MonadTrans, MonadIO, MonadThrow)
+newtype GenT m a = GenT { unGen :: StateT SMGen m a } deriving (Functor, Applicative, Monad, MonadTrans, MonadIO, MonadThrow, MonadReader r)
+
+instance MonadState s m => MonadState s (GenT m) where
+  get = lift get
+  put = lift . put
+  state = lift . state
+
 
 -- | Pure random generation
 type Gen = GenT Identity
