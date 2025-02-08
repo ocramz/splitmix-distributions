@@ -63,6 +63,7 @@ module System.Random.SplitMix.Distributions (
   Gen, sample, samples,
   -- ** Monadic
   GenT, sampleT, samplesT,
+  -- *** Return final PRNG state
   sampleRunT,
   samplesRunT,
   -- ** IO-based
@@ -144,6 +145,8 @@ samplesT :: Monad m =>
 samplesT n seed gg = sampleT seed (replicateM n gg)
 
 -- | Sample a batch in a monadic context, returning the final PRNG state as well
+--
+-- Same as @n@ repeated invocations of `sampleRunT`, while threading the PRNG state.
 samplesRunT :: Monad m =>
                Int -- ^ size of sample
             -> SMGenState -- ^ random seed
@@ -153,11 +156,11 @@ samplesRunT n seed gg = second unseedSMGen <$> runStateT (replicateM n $ unGen g
 
 -- | Internal state of the splitmix PRNG.
 --
--- this representation has the benefit of being serializable (e.g. can be passed back and forth between API calls)
+-- This representation has the benefit of being serializable (e.g. can be passed back and forth between API calls)
 type SMGenState = (Word64, Word64)
 
-getSeed :: SMGen -> Word64
-getSeed = fst . unseedSMGen
+-- getSeed :: SMGen -> Word64
+-- getSeed = fst . unseedSMGen
 
 -- | Initialize a splitmix random generator from system entropy (current time etc.) and sample n times from the PRNG.
 samplesIO :: MonadIO m => Int -> GenT m a -> m [a]
