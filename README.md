@@ -1,5 +1,7 @@
 # splitmix-distributions
 
+[![Haskell CI](https://github.com/ocramz/splitmix-distributions/actions/workflows/ci.yaml/badge.svg)](https://github.com/ocramz/splitmix-distributions/actions/workflows/ci.yaml)
+
 Random samplers for some common distributions, as well as a convenient interface for composing them, based on `splitmix`.
 
 
