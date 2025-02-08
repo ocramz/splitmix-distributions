@@ -58,10 +58,13 @@ module System.Random.SplitMix.Distributions (
   zipf,
   crp,
   -- * PRNG
+  SMGenState,
   -- ** Pure
   Gen, sample, samples,
   -- ** Monadic
   GenT, sampleT, samplesT,
+  sampleRunT,
+  samplesRunT,
   -- ** IO-based
   sampleIO, samplesIO,
   -- ** splitmix utilities
@@ -70,6 +73,7 @@ module System.Random.SplitMix.Distributions (
 
 import Control.Monad (replicateM)
 import Control.Monad.IO.Class (MonadIO(..))
+import Data.Bifunctor (second)
 import Data.Foldable (toList)
 import Data.Functor.Identity (Identity(..))
 import Data.List (findIndex)
@@ -87,7 +91,7 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Reader (MonadReader(..))
 import Control.Monad.State (MonadState(..), modify)
 -- splitmix
-import System.Random.SplitMix (SMGen, mkSMGen, initSMGen, unseedSMGen, splitSMGen, nextDouble)
+import System.Random.SplitMix (SMGen, mkSMGen, seedSMGen', initSMGen, unseedSMGen, splitSMGen, nextDouble)
 -- transformers
 import Control.Monad.Trans.Reader (ReaderT(..))
 import Control.Monad.Trans.State (StateT(..), runStateT, evalStateT, State, runState, evalState)
@@ -115,6 +119,16 @@ sampleT :: Monad m =>
         -> m a
 sampleT seed gg = evalStateT (unGen gg) (mkSMGen seed)
 
+-- | Sample in a monadic context, returning the final PRNG state as well
+--
+-- This makes it possible to have deterministic chains of invocations, for reproducible results
+sampleRunT :: (Functor m) =>
+              SMGenState -- ^ random seed
+           -> GenT m a
+           -> m (a, SMGenState) -- ^ (result, final PRNG state)
+sampleRunT seed gg = second unseedSMGen <$> runStateT (unGen gg) (seedSMGen' seed)
+
+
 -- | Initialize a splitmix random generator from system entropy (current time etc.) and sample from the PRNG.
 sampleIO :: MonadIO m => GenT m b -> m b
 sampleIO gg = do
@@ -128,6 +142,22 @@ samplesT :: Monad m =>
          -> GenT m a
          -> m [a]
 samplesT n seed gg = sampleT seed (replicateM n gg)
+
+-- | Sample a batch in a monadic context, returning the final PRNG state as well
+samplesRunT :: Monad m =>
+               Int -- ^ size of sample
+            -> SMGenState -- ^ random seed
+            -> GenT m a
+            -> m ([a], SMGenState) -- ^ (result, final PRNG state)
+samplesRunT n seed gg = second unseedSMGen <$> runStateT (replicateM n $ unGen gg) (seedSMGen' seed)
+
+-- | Internal state of the splitmix PRNG.
+--
+-- this representation has the benefit of being serializable (e.g. can be passed back and forth between API calls)
+type SMGenState = (Word64, Word64)
+
+getSeed :: SMGen -> Word64
+getSeed = fst . unseedSMGen
 
 -- | Initialize a splitmix random generator from system entropy (current time etc.) and sample n times from the PRNG.
 samplesIO :: MonadIO m => Int -> GenT m a -> m [a]

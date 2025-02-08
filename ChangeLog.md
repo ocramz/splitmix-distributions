@@ -1,3 +1,9 @@
+1.1
+
+- add sampleRunT and samplesRunT: both return the final state of the PRNG as a tuple of Word64
+- add unit test that asserts that sample runs are deterministic given the same starting PRNG state
+- 
+
 1.0
 
 - add MonadReader r (GenT m) instance
