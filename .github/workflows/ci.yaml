@@ -1,0 +1,30 @@
+name: Haskell CI
+
+on: [push]
+  # on:
+  # push:
+  #   branches: [ "*" ]
+  # pull_request:
+  #   branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: haskell-actions/setup@v2
+      with:
+        ghc-version: '9.6.6'
+        enable-stack: true
+        cabal-version: '3.2'
+    - name: Install dependencies
+      run: |
+        stack build --verbosity error
+    - name: Run tests
+      run: stack test
