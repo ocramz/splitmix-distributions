@@ -183,7 +183,7 @@ samples :: Int -- ^ sample size
         -> [a]
 samples n seed gg = sample seed (replicateM n gg)
 
--- | Uniform integer in the closed interval [a, b]
+-- | Uniform integer in the interval [a, b]
 uniformInteger :: Monad m => Integer -> Integer -> GenT m Integer
 uniformInteger a b = withGen (nextInteger a b)
 
