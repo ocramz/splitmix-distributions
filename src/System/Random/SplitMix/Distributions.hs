@@ -51,6 +51,7 @@ module System.Random.SplitMix.Distributions (
   laplace,
   weibull,
   -- ** Discrete
+  uniformInteger,
   bernoulli, fairCoin,
   multinomial,
   categorical,
@@ -86,13 +87,13 @@ import qualified Data.IntMap as IM
 -- erf
 import Data.Number.Erf (InvErf(..))
 -- exceptions
-import Control.Monad.Catch (MonadThrow(..))
+import Control.Monad.Catch (MonadThrow(..), MonadCatch(..))
 -- mtl
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Reader (MonadReader(..))
 import Control.Monad.State (MonadState(..), modify)
 -- splitmix
-import System.Random.SplitMix (SMGen, mkSMGen, seedSMGen', initSMGen, unseedSMGen, splitSMGen, nextDouble)
+import System.Random.SplitMix (SMGen, mkSMGen, seedSMGen', initSMGen, unseedSMGen, splitSMGen, nextDouble, nextInteger)
 -- transformers
 import Control.Monad.Trans.Reader (ReaderT(..))
 import Control.Monad.Trans.State (StateT(..), runStateT, evalStateT, State, runState, evalState)
@@ -102,7 +103,8 @@ import Control.Monad.Trans.State (StateT(..), runStateT, evalStateT, State, runS
 -- wraps 'splitmix' state-passing inside a 'StateT' monad
 --
 -- useful for embedding random generation inside a larger effect stack
-newtype GenT m a = GenT { unGen :: StateT SMGen m a } deriving (Functor, Applicative, Monad, MonadTrans, MonadIO, MonadThrow, MonadReader r)
+newtype GenT m a = GenT { unGen :: StateT SMGen m a }
+  deriving (Functor, Applicative, Monad, MonadTrans, MonadIO, MonadThrow, MonadCatch, MonadReader r, MonadFail)
 
 instance MonadState s m => MonadState s (GenT m) where
   get = lift get
@@ -180,6 +182,10 @@ samples :: Int -- ^ sample size
         -> Gen a
         -> [a]
 samples n seed gg = sample seed (replicateM n gg)
+
+-- | Uniform integer in the closed interval [a, b]
+uniformInteger :: Monad m => Integer -> Integer -> GenT m Integer
+uniformInteger a b = withGen (nextInteger a b)
 
 -- | Bernoulli trial
 bernoulli :: Monad m =>

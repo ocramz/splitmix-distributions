@@ -1,3 +1,8 @@
+1.2
+
+- add MonadCatch and MonadFail instances
+- add uniformInteger generator
+
 1.1
 
 - add sampleRunT and samplesRunT: both return the final state of the PRNG as a tuple of Word64
